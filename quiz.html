@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vocabulary Quiz</title>
+</head>
+<body>
+    <h2>What is the meaning of: <strong>{{ word }}</strong>?</h2>
+    <form method="POST" action="/result">
+        {% for option in options %}
+            <input type="radio" name="choice" value="{{ option }}" required>
+            {{ option }}<br>
+        {% endfor %}
+        <input type="hidden" name="correct" value="{{ correct }}">
+        <br>
+        <input type="submit" value="Submit Answer">
+    </form>
+</body>
+</html>
