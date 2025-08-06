@@ -1,150 +1,58 @@
 from flask import Flask, render_template, request
-import random
+import random, os, requests, json
 
 app = Flask(__name__)
 
 # Vocabulary data
-vocab_data = {
-    "Aberration": [
-        "A departure from what is normal",
-        "A type of music genre",
-        "A scientific theory",
-        "A type of flower"
-    ],
-    "Belligerent": [
-        "Hostile and aggressive",
-        "Nice and pleasant",
-        "A form of poetry",
-        "A musical term"
-    ],
-    "Cacophony": [
-        "A harsh, discordant mixture of sounds",
-        "A cooking technique",
-        "A type of sport",
-        "A type of dance"
-    ],
-    "Debilitate": [
-        "To weaken or hinder",
-        "To encourage",
-        "To decorate",
-        "To educate"
-    ],
-    "Ebullient": [
-        "Full of energy and enthusiasm",
-        "Calm and reserved",
-        "A type of writing style",
-        "A musical instrument"
-    ],
-    "Facilitate": [
-        "To make easier",
-        "To complicate",
-        "To ignore",
-        "To destroy"
-    ],
-    "Garrulous": [
-        "Excessively talkative",
-        "Brief and to the point",
-        "An expert in a field",
-        "Shy and reserved"
-    ],
-    "Hapless": [
-        "Unfortunate or unlucky",
-        "Incredibly lucky",
-        "Rhythmic and smooth",
-        "Highly successful"
-    ],
-    "Impetuous": [
-        "Acting quickly without thought",
-        "Cautious and deliberate",
-        "Calm and relaxed",
-        "Thoughtful and considerate"
-    ],
-    "Juxtaposition": [
-        "The act of placing two things side by side for comparison",
-        "A type of artistic painting",
-        "An emotional outburst",
-        "A scientific discovery"
-    ],
-    "Kinetic": [
-        "Related to motion",
-        "Static and unchanging",
-        "Calm and serene",
-        "Confused and chaotic"
-    ],
-    "Lethargic": [
-        "Feeling sluggish or lacking energy",
-        "Highly energetic and lively",
-        "Eager and motivated",
-        "Focused and determined"
-    ],
-    "Mundane": [
-        "Lacking interest or excitement; dull",
-        "Extraordinary and exciting",
-        "Bright and colorful",
-        "Fascinating and captivating"
-    ],
-    "Nefarious": [
-        "Wicked or criminal",
-        "Heroic and admirable",
-        "Generous and kind",
-        "Joyful and happy"
-    ],
-    "Obfuscate": [
-        "To confuse or make unclear",
-        "To clarify and explain",
-        "To inspire or motivate",
-        "To entertain and amuse"
-    ],
-    "Pervasive": [
-        "Spreading widely throughout an area or group",
-        "Isolated and confined",
-        "Localized and limited",
-        "Temporary and fleeting"
-    ],
-    "Quintessential": [
-        "The most perfect or typical example",
-        "A rare and unusual occurrence",
-        "An outdated concept",
-        "A common misconception"
-    ],
-    "Ravenous": [
-        "Extremely hungry",
-        "Fully satisfied",
-        "Indifferent and apathetic",
-        "Calm and peaceful"
-    ],
-    "Sycophant": [
-        "A person who flatters others for personal gain",
-        "An independent thinker",
-        "A critic of authority",
-        "A fearless leader"
-    ],
-    "Trepidation": [
-        "A feeling of fear or anxiety about something that may happen",
-        "Confidence and bravery",
-        "Indifference to the future",
-        "Excitement about new opportunities"
-    ],
-    "Ubiquitous": [
-        "Present everywhere at once",
-        "Rare and hard to find",
-        "Occasionally seen",
-        "Limited to specific places"
-    ],
-    "Verbose": [
-        "Using more words than are needed; wordy",
-        "Concise and to the point",
-        "Clear and simple",
-        "Confusing and unclear"
-    ],
-    "Zealous": [
-        "Having or showing devotion or enthusiasm",
-        "Indifferent and apathetic",
-        "Fearful and hesitant",
-        "Mildly interested"
-    ]
-}
+# fetch from ChatGPT
+API_KEY = os.environ.get("CHATGPT_API_KEY")
 
+big_prompt = """
+Please give me an SAT Hard 5000 vocabulary flashcard quiz with 4 choices like a multiple choice 
+question where the first choice is always the correct answer but when shuffled 
+so it acts as a flashcard revising system.  Give me at least 10 such problems.
+
+Your output must conform to this format such that it can be parsed directly into a python dictionary by the json module.
+Do not include any extra text or explanations.  Your replay must be only JSON that can be parsed into a dictionary directly with no cleaning:
+vocab_data = {
+        "Aberration": [
+            "A departure from what is normal",
+            "A type of music genre",
+            "A scientific theory",
+            "A type of flower"
+        ]}
+
+"""
+API_URL = 'https://api.openai.com/v1/chat/completions'
+
+
+def get_gpt_output(prompt):
+    print("Getting ChatGPT output...")
+    headers = {
+        'Authorization': f'Bearer {API_KEY}',
+        'Content-Type': 'application/json'
+    }
+
+    data = {
+        "model": "gpt-4o-mini",  # or "gpt-4" if you have access
+        "messages": [
+            {"role": "system", "content": "You are a helpful English professor."},
+            {"role": "user", "content": f"{prompt}"}
+        ]
+    }
+
+    response = requests.post(API_URL, headers=headers, json=data)
+
+    vocab_data = {"ERROR": "No GPT Data Available"}
+    if response.status_code == 200:
+        reply = response.json()['choices'][0]['message']['content']
+        reply = reply.replace("```", '')
+        reply = reply.replace("json", '')
+        vocab_data = json.loads(reply)
+    return vocab_data
+
+vocab_data = get_gpt_output(big_prompt)
+print(vocab_data)
 @app.route("/")
 def quiz():
     word, options = random.choice(list(vocab_data.items()))
@@ -167,4 +75,4 @@ def result():
     return render_template("result.html", message=message)
 
 if __name__ == "__main__":
-    app.run(debug=False,host="0.0.0.0")
+    app.run(debug=True)
